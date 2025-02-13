@@ -1,140 +1,230 @@
-"use client"
+"use client";
 
-import { useState, KeyboardEvent } from "react"
-import { AnimatePresence, motion } from "framer-motion"
-import { Mic, Send, Menu, Plus, Pencil, Check } from "lucide-react"
-import MessageList from "./message-list"
-import ProductCard from "./product-card"
-import VoiceInput from "./voice-input"
-import Sidebar from "./sidebar"
-import { Button } from "./ui/button"
+import { useState, KeyboardEvent } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { Mic, Send, Menu, Plus, Pencil, Check } from "lucide-react";
+import MessageList from "./message-list";
+import ProductCard from "./product-card";
+import VoiceInput from "./voice-input";
+import Sidebar from "./sidebar";
+import { Button } from "./ui/button";
 
 interface ChatSession {
-  id: string
-  title: string
-  messages: Array<{ role: string; content: string }>
+  id: string;
+  title: string;
+  messages: Array<{ role: string; content: string }>;
 }
 
 export default function Chat() {
-  const [chatSessions, setChatSessions] = useState<ChatSession[]>([{
-    id: '1',
-    title: 'New Chat',
-    messages: [{ role: "assistant", content: "Hello! I'm your AI shopping assistant. How can I help you today?" }]
-  }])
-  const [currentChatId, setCurrentChatId] = useState('1')
-  const [input, setInput] = useState("")
-  const [isVoiceInputActive, setIsVoiceInputActive] = useState(false)
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false)
-  const [editingChatId, setEditingChatId] = useState<string | null>(null)
-  const [editTitle, setEditTitle] = useState("")
+  const [input, setInput] = useState("");
+  const [messages, setMessages] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const handleSend = async () => {
+    if (!input.trim()) return;
+
+    setMessages((prev) => [...prev, { role: "user", content: input }]);
+    setIsLoading(true);
+    setMessages((prev) => [...prev, { role: "assistant", content: "..." }]);
+    const loadingToast = toast.loading("Waiting for a response...");
+
+    try {
+      const payload = {
+        query: input,
+        history: messages,
+      };
+
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_BACKEND_URL}/api/chat`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        }
+      );
+
+      if (!response.ok) {
+        const errorData = await response.text();
+        throw new Error(`Error: ${response.status} - ${errorData}`);
+      }
+
+      const data = await response.json();
+
+      setMessages((prev) => {
+        const updated = prev.slice(0, -1);
+        return [...updated, { role: "assistant", content: data.answer }];
+      });
+
+      toast.success("Response received!", { id: loadingToast });
+    } catch (err) {
+      console.error(err);
+
+      setMessages((prev) => {
+        const updated = prev.slice(0, -1);
+        return [
+          ...updated,
+          { role: "assistant", content: "Error: Could not get a response." },
+        ];
+      });
+
+      toast.error("Failed to get a response from the server.", {
+        id: loadingToast,
+      });
+    } finally {
+      setIsLoading(false);
+      setInput("");
+    }
+  };
+
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>([
+    {
+      id: "1",
+      title: "New Chat",
+      messages: [
+        {
+          role: "assistant",
+          content:
+            "Hello! I'm your AI shopping assistant. How can I help you today?",
+        },
+      ],
+    },
+  ]);
+  const [currentChatId, setCurrentChatId] = useState("1");
+  //const [input, setInput] = useState("")
+  const [isVoiceInputActive, setIsVoiceInputActive] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [editingChatId, setEditingChatId] = useState<string | null>(null);
+  const [editTitle, setEditTitle] = useState("");
   const [productRecommendations, setProductRecommendations] = useState([
     {
       name: "MacBook Pro 16",
       price: 2499.99,
       rating: 4.9,
-      image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mbp16-spacegray-select-202301?wid=904&hei=840&fmt=jpeg&qlt=90&.v=1671304673202",
-      description: "M2 Max, 32GB RAM, 1TB SSD"
+      image:
+        "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mbp16-spacegray-select-202301?wid=904&hei=840&fmt=jpeg&qlt=90&.v=1671304673202",
+      description: "M2 Max, 32GB RAM, 1TB SSD",
     },
     {
       name: "iPhone 15 Pro Max",
       price: 1199.99,
       rating: 4.8,
-      image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-7inch-naturaltitanium?wid=5120&hei=2880&fmt=p-jpg&qlt=80&.v=1692845702708",
-      description: "Natural Titanium, 256GB Storage"
+      image:
+        "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-7inch-naturaltitanium?wid=5120&hei=2880&fmt=p-jpg&qlt=80&.v=1692845702708",
+      description: "Natural Titanium, 256GB Storage",
     },
     {
       name: "AirPods Pro",
       price: 249.99,
       rating: 4.7,
-      image: "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361",
-      description: "2nd Generation with Active Noise Cancellation"
-    }
-  ])
+      image:
+        "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361",
+      description: "2nd Generation with Active Noise Cancellation",
+    },
+  ]);
 
-  const currentChat = chatSessions.find(chat => chat.id === currentChatId)
+  const currentChat = chatSessions.find((chat) => chat.id === currentChatId);
 
   const createNewChat = () => {
     const newChat: ChatSession = {
       id: Date.now().toString(),
-      title: 'New Chat',
-      messages: [{ role: "assistant", content: "Hello! I'm your AI shopping assistant. How can I help you today?" }]
-    }
-    setChatSessions(prev => [...prev, newChat])
-    setCurrentChatId(newChat.id)
-    setInput("")
-    setIsVoiceInputActive(false)
-  }
+      title: "New Chat",
+      messages: [
+        {
+          role: "assistant",
+          content:
+            "Hello! I'm your AI shopping assistant. How can I help you today?",
+        },
+      ],
+    };
+    setChatSessions((prev) => [...prev, newChat]);
+    setCurrentChatId(newChat.id);
+    setInput("");
+    setIsVoiceInputActive(false);
+  };
 
   const handleSendMessage = async () => {
-    if (!input.trim()) return
+    if (!input.trim()) return;
 
-    const updatedSessions = chatSessions.map(chat => {
+    const updatedSessions = chatSessions.map((chat) => {
       if (chat.id === currentChatId) {
-        const updatedMessages = [...chat.messages, { role: "user", content: input }]
-        let updatedTitle = chat.title
+        const updatedMessages = [
+          ...chat.messages,
+          { role: "user", content: input },
+        ];
+        let updatedTitle = chat.title;
         if (chat.title === "New Chat" && chat.messages.length === 1) {
-          updatedTitle = input.split(' ').slice(0, 4).join(' ') + '...'
+          updatedTitle = input.split(" ").slice(0, 4).join(" ") + "...";
         }
         return {
           ...chat,
           title: updatedTitle,
-          messages: updatedMessages
-        }
+          messages: updatedMessages,
+        };
       }
-      return chat
-    })
+      return chat;
+    });
 
-    setChatSessions(updatedSessions)
-    setInput("")
+    setChatSessions(updatedSessions);
+    setInput("");
     if (isVoiceInputActive) {
-      setIsVoiceInputActive(false)
+      setIsVoiceInputActive(false);
     }
-  }
+  };
 
   const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter') {
+    if (e.key === "Enter") {
       if (e.shiftKey) {
-        return
+        return;
       }
-      e.preventDefault()
-      handleSendMessage()
+      e.preventDefault();
+      handleSendMessage();
     }
-  }
+  };
 
   const handleRenameChat = (chatId: string) => {
-    setEditingChatId(chatId)
-    const chat = chatSessions.find(c => c.id === chatId)
+    setEditingChatId(chatId);
+    const chat = chatSessions.find((c) => c.id === chatId);
     if (chat) {
-      setEditTitle(chat.title)
+      setEditTitle(chat.title);
     }
-  }
+  };
 
   const saveNewTitle = () => {
-    if (!editTitle.trim()) return
-    setChatSessions(prev => prev.map(chat => {
-      if (chat.id === editingChatId) {
-        return { ...chat, title: editTitle.trim() }
-      }
-      return chat
-    }))
-    setEditingChatId(null)
-    setEditTitle("")
-  }
+    if (!editTitle.trim()) return;
+    setChatSessions((prev) =>
+      prev.map((chat) => {
+        if (chat.id === editingChatId) {
+          return { ...chat, title: editTitle.trim() };
+        }
+        return chat;
+      })
+    );
+    setEditingChatId(null);
+    setEditTitle("");
+  };
 
   const handleNewChat = () => {
     const newChat = {
       id: Date.now().toString(),
-      title: 'New Chat',
-      messages: [{ role: "assistant", content: "Hello! I'm your AI shopping assistant. How can I help you today?" }]
+      title: "New Chat",
+      messages: [
+        {
+          role: "assistant",
+          content:
+            "Hello! I'm your AI shopping assistant. How can I help you today?",
+        },
+      ],
     };
     setChatSessions([...chatSessions, newChat]);
     setCurrentChatId(newChat.id);
   };
 
   const handleRename = (chatId: string, newTitle: string) => {
-    setChatSessions(chatSessions.map(chat =>
-      chat.id === chatId ? { ...chat, title: newTitle } : chat
-    ));
+    setChatSessions(
+      chatSessions.map((chat) =>
+        chat.id === chatId ? { ...chat, title: newTitle } : chat
+      )
+    );
   };
 
   return (
@@ -194,7 +284,7 @@ export default function Chat() {
             <div className="flex items-center gap-3">
               <VoiceInput
                 isActive={isVoiceInputActive}
-                onEnd={() => { }}
+                onEnd={() => {}}
                 onClick={() => setIsVoiceInputActive(!isVoiceInputActive)}
               />
               <textarea
@@ -204,7 +294,7 @@ export default function Chat() {
                 rows={1}
                 className="flex-1 bg-gray-800 rounded-2xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-purple-600/50 resize-none"
                 placeholder="Type your message..."
-                style={{ minHeight: '44px', maxHeight: '120px' }}
+                style={{ minHeight: "44px", maxHeight: "120px" }}
               />
               <Button
                 onClick={handleSendMessage}
@@ -216,7 +306,14 @@ export default function Chat() {
           </div>
         </div>
       </div>
-    </div>
-  )
-}
 
+      <button
+        className="btn btn-primary"
+        onClick={handleSend}
+        disabled={isLoading || !input.trim()} // Disable if loading or input is empty
+      >
+        {isLoading ? "Sending..." : "Send"}
+      </button>
+    </div>
+  );
+}
