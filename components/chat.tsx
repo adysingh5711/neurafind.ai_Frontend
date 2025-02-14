@@ -8,6 +8,47 @@ import ProductCard from "./product-card";
 import VoiceInput from "./voice-input";
 import Sidebar from "./sidebar";
 import { Button } from "./ui/button";
+import {uploadFileToFirebase} from "../lib/firebaseUtil";
+
+import { AudioRecorder } from "react-audio-voice-recorder";
+
+const addAudioElement = async (blob: Blob) => {
+  const url = URL.createObjectURL(blob);
+  const audio = document.createElement("audio");
+  audio.src = url;
+  audio.controls = true;
+  document.body.appendChild(audio);
+  console.log("Audio element added to the DOM");
+
+  // Pass the blob, not the object URL, to the upload function
+  const url2 = await uploadFileToFirebase(blob, "audio");
+  console.log("Audio uploaded to firebase", url2);
+
+  const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
+
+   // Make a POST request to the /transcript endpoint with the Firebase URL
+   try {
+    const response = await fetch(`${backendURL}/transcript`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ audioURL: url2 }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Server responded with ${response.status}`);
+    }
+
+    const transcriptData = await response.json();
+    console.log("Transcription response:", transcriptData);
+  } catch (error) {
+    console.error("Error posting transcript request:", error);
+  }
+  
+
+};
+
 
 interface ChatSession {
   id: string;
@@ -282,11 +323,21 @@ export default function Chat() {
         <div className="absolute bottom-0 left-0 right-0 bg-gray-900/95 backdrop-blur-sm border-t border-gray-800">
           <div className="max-w-4xl mx-auto p-4">
             <div className="flex items-center gap-3">
-              <VoiceInput
+              <AudioRecorder
+                onRecordingComplete={addAudioElement}
+                audioTrackConstraints={{
+                  noiseSuppression: true,
+                  echoCancellation: true,
+                }}
+                // downloadOnSavePress={true}
+                // downloadFileExtension="webm"
+              />
+
+              {/* <VoiceInput
                 isActive={isVoiceInputActive}
                 onEnd={() => {}}
                 onClick={() => setIsVoiceInputActive(!isVoiceInputActive)}
-              />
+              /> */}
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
