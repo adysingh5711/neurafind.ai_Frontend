@@ -254,12 +254,12 @@ export default function Chat() {
       </AnimatePresence>
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col h-full relative">
-        {/* Header */}
-        <div className="flex items-center gap-4 p-4 border-b border-gray-800">
+      <div className="flex-1 flex flex-col h-full relative ml-0 transition-all duration-300">
+        {/* Header with conditional margin */}
+        <div className={`flex items-center gap-4 p-4 border-b border-gray-800 ${isSidebarOpen ? 'ml-72' : ''}`}>
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="hover:bg-gray-800 p-2 rounded-full transition-colors"
+            className="hover:bg-gray-800 p-2 rounded-full transition-colors z-50"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -267,7 +267,7 @@ export default function Chat() {
         </div>
 
         {/* Messages and products container with proper padding */}
-        <div className="flex-1 overflow-y-auto">
+        <div className="flex-1 overflow-y-auto scrollbar-hide">
           <div className="max-w-4xl mx-auto p-4 space-y-6 pb-32">
             <MessageList messages={messages} />
           </div>

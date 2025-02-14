@@ -21,11 +21,21 @@ export default function MessageList({ messages }: MessageListProps) {
         >
           <div
             className={`max-w-[80%] rounded-2xl p-4 shadow-lg ${message.role === "user"
-                ? "bg-purple-600 text-white"
-                : "bg-gray-800 text-white border border-gray-700"
+              ? "bg-purple-600 text-white"
+              : "bg-gray-800 text-white border border-gray-700"
               }`}
           >
-            {message.content}
+            {message.content.split('\n').map((paragraph, index) => (
+              <p key={index} className="font-thin mb-2 last:mb-0">
+                {paragraph.split('**').map((text, i) =>
+                  i % 2 === 1 ? (
+                    <strong key={i} className="font-bold">{text}</strong>
+                  ) : (
+                    text
+                  )
+                )}
+              </p>
+            ))}
           </div>
         </motion.div>
       ))}
