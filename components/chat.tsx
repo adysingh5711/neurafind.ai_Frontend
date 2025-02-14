@@ -8,9 +8,10 @@ import ProductCard from "./product-card";
 import VoiceInput from "./voice-input";
 import Sidebar from "./sidebar";
 import { Button } from "./ui/button";
-import {uploadFileToFirebase} from "../lib/firebaseUtil";
+import { uploadFileToFirebase } from "../lib/firebaseUtil";
 
 import { AudioRecorder } from "react-audio-voice-recorder";
+import { toast } from "sonner";
 
 const addAudioElement = async (blob: Blob) => {
   const url = URL.createObjectURL(blob);
@@ -26,8 +27,8 @@ const addAudioElement = async (blob: Blob) => {
 
   const backendURL = process.env.NEXT_PUBLIC_BACKEND_URL;
 
-   // Make a POST request to the /transcript endpoint with the Firebase URL
-   try {
+  // Make a POST request to the /transcript endpoint with the Firebase URL
+  try {
     const response = await fetch(`${backendURL}/transcript`, {
       method: "POST",
       headers: {
@@ -45,7 +46,6 @@ const addAudioElement = async (blob: Blob) => {
   } catch (error) {
     console.error("Error posting transcript request:", error);
   }
-  
 
 };
 
@@ -58,21 +58,38 @@ interface ChatSession {
 
 export default function Chat() {
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState<
+    Array<{ role: "assistant" | "user"; content: string }>
+  >([
+    {
+      role: "assistant",
+      content: "Hello! I'm your AI shopping assistant. How can I help you today?",
+    },
+  ]);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = async () => {
+  const handleSendMessage = async () => {
     if (!input.trim()) return;
 
-    setMessages((prev) => [...prev, { role: "user", content: input }]);
+    // Update local messages state
+    const newUserMessage = { role: "user", content: input };
+    const updatedHistory = [...messages, newUserMessage];
+    setMessages(updatedHistory);
+
+    // Update chat sessions state
+    setChatSessions(prev => prev.map(chat =>
+      chat.id === currentChatId ? {
+        ...chat,
+        messages: [...chat.messages, newUserMessage]
+      } : chat
+    ));
+
     setIsLoading(true);
-    setMessages((prev) => [...prev, { role: "assistant", content: "..." }]);
-    const loadingToast = toast.loading("Waiting for a response...");
 
     try {
       const payload = {
         query: input,
-        history: messages,
+        history: updatedHistory,
       };
 
       const response = await fetch(
@@ -91,30 +108,40 @@ export default function Chat() {
 
       const data = await response.json();
 
-      setMessages((prev) => {
-        const updated = prev.slice(0, -1);
-        return [...updated, { role: "assistant", content: data.answer }];
-      });
+      // Update both state sources with assistant response
+      const assistantMessage = { role: "assistant", content: data.answer };
+      setMessages(prev => [...prev, assistantMessage]);
+      setChatSessions(prev => prev.map(chat =>
+        chat.id === currentChatId ? {
+          ...chat,
+          messages: [...chat.messages, assistantMessage]
+        } : chat
+      ));
 
-      toast.success("Response received!", { id: loadingToast });
+      toast.success("Response received!");
     } catch (err) {
       console.error(err);
-
-      setMessages((prev) => {
-        const updated = prev.slice(0, -1);
-        return [
-          ...updated,
-          { role: "assistant", content: "Error: Could not get a response." },
-        ];
-      });
-
-      toast.error("Failed to get a response from the server.", {
-        id: loadingToast,
-      });
+      setMessages((prev) => [
+        ...prev,
+        { role: "assistant", content: "Error: Could not get a response." },
+      ]);
+      toast.error("Failed to get a response from the server.");
     } finally {
       setIsLoading(false);
       setInput("");
     }
+  };
+
+  const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      handleSendMessage();
+    }
+  };
+
+  const handleVoiceInput = () => {
+    // Implement voice input functionality here
+    console.log("Voice input activated");
   };
 
   const [chatSessions, setChatSessions] = useState<ChatSession[]>([
@@ -131,37 +158,10 @@ export default function Chat() {
     },
   ]);
   const [currentChatId, setCurrentChatId] = useState("1");
-  //const [input, setInput] = useState("")
   const [isVoiceInputActive, setIsVoiceInputActive] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [editingChatId, setEditingChatId] = useState<string | null>(null);
   const [editTitle, setEditTitle] = useState("");
-  const [productRecommendations, setProductRecommendations] = useState([
-    {
-      name: "MacBook Pro 16",
-      price: 2499.99,
-      rating: 4.9,
-      image:
-        "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/mbp16-spacegray-select-202301?wid=904&hei=840&fmt=jpeg&qlt=90&.v=1671304673202",
-      description: "M2 Max, 32GB RAM, 1TB SSD",
-    },
-    {
-      name: "iPhone 15 Pro Max",
-      price: 1199.99,
-      rating: 4.8,
-      image:
-        "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/iphone-15-pro-finish-select-202309-6-7inch-naturaltitanium?wid=5120&hei=2880&fmt=p-jpg&qlt=80&.v=1692845702708",
-      description: "Natural Titanium, 256GB Storage",
-    },
-    {
-      name: "AirPods Pro",
-      price: 249.99,
-      rating: 4.7,
-      image:
-        "https://store.storeimages.cdn-apple.com/4982/as-images.apple.com/is/MQD83?wid=1144&hei=1144&fmt=jpeg&qlt=90&.v=1660803972361",
-      description: "2nd Generation with Active Noise Cancellation",
-    },
-  ]);
 
   const currentChat = chatSessions.find((chat) => chat.id === currentChatId);
 
@@ -181,45 +181,6 @@ export default function Chat() {
     setCurrentChatId(newChat.id);
     setInput("");
     setIsVoiceInputActive(false);
-  };
-
-  const handleSendMessage = async () => {
-    if (!input.trim()) return;
-
-    const updatedSessions = chatSessions.map((chat) => {
-      if (chat.id === currentChatId) {
-        const updatedMessages = [
-          ...chat.messages,
-          { role: "user", content: input },
-        ];
-        let updatedTitle = chat.title;
-        if (chat.title === "New Chat" && chat.messages.length === 1) {
-          updatedTitle = input.split(" ").slice(0, 4).join(" ") + "...";
-        }
-        return {
-          ...chat,
-          title: updatedTitle,
-          messages: updatedMessages,
-        };
-      }
-      return chat;
-    });
-
-    setChatSessions(updatedSessions);
-    setInput("");
-    if (isVoiceInputActive) {
-      setIsVoiceInputActive(false);
-    }
-  };
-
-  const handleKeyPress = (e: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === "Enter") {
-      if (e.shiftKey) {
-        return;
-      }
-      e.preventDefault();
-      handleSendMessage();
-    }
   };
 
   const handleRenameChat = (chatId: string) => {
@@ -302,20 +263,13 @@ export default function Chat() {
           >
             <Menu className="w-5 h-5" />
           </button>
-          <h1 className="text-xl font-semibold">AI Shopping Assistant</h1>
+          <h1 className="text-xl font-semibold">Neurafind AI</h1>
         </div>
 
         {/* Messages and products container with proper padding */}
         <div className="flex-1 overflow-y-auto">
           <div className="max-w-4xl mx-auto p-4 space-y-6 pb-32">
-            <MessageList messages={currentChat?.messages || []} />
-            {productRecommendations.length > 0 && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {productRecommendations.map((product, index) => (
-                  <ProductCard key={index} {...product} />
-                ))}
-              </div>
-            )}
+            <MessageList messages={messages} />
           </div>
         </div>
 
@@ -329,15 +283,7 @@ export default function Chat() {
                   noiseSuppression: true,
                   echoCancellation: true,
                 }}
-                // downloadOnSavePress={true}
-                // downloadFileExtension="webm"
               />
-
-              {/* <VoiceInput
-                isActive={isVoiceInputActive}
-                onEnd={() => {}}
-                onClick={() => setIsVoiceInputActive(!isVoiceInputActive)}
-              /> */}
               <textarea
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
@@ -349,6 +295,7 @@ export default function Chat() {
               />
               <Button
                 onClick={handleSendMessage}
+                disabled={isLoading || !input.trim()}
                 className="rounded-full bg-purple-600 hover:bg-purple-700 w-10 h-10 p-0 flex items-center justify-center"
               >
                 <Send className="w-4 h-4 stroke-white" />
@@ -357,14 +304,6 @@ export default function Chat() {
           </div>
         </div>
       </div>
-
-      <button
-        className="btn btn-primary"
-        onClick={handleSend}
-        disabled={isLoading || !input.trim()} // Disable if loading or input is empty
-      >
-        {isLoading ? "Sending..." : "Send"}
-      </button>
     </div>
   );
 }
