@@ -198,10 +198,9 @@ export default function Chat() {
       </AnimatePresence>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col h-full relative">
+      <div className="flex-1 flex flex-col h-full relative ml-72">
         <div
-          className={`flex items-center gap-4 p-4 border-b border-gray-800 ${isSidebarOpen ? "ml-72" : ""
-            }`}
+          className={`flex items-center gap-4 p-4 border-b border-gray-800`}
         >
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
