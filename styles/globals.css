@@ -92,3 +92,28 @@ body {
     @apply bg-background text-foreground;
   }
 }
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    z-index: 1000; /* Ensure it appears above other content */
+  }
+
+  .main-content {
+    margin-top: 0; /* Reset margin for mobile */
+  }
+}
+
+@media (min-width: 769px) {
+  .sidebar {
+    position: relative;
+    width: 16rem; /* Sidebar width for desktop */
+  }
+
+  .main-content {
+    margin-left: 16rem; /* Adjust margin for desktop */
+  }
+}

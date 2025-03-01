@@ -9,6 +9,7 @@ import { Button } from "./ui/button";
 import { uploadFileToFirebase } from "../lib/firebaseUtil";
 import { AudioRecorder } from "react-audio-voice-recorder";
 import { toast } from "sonner";
+import { useIsMobile } from "../hooks/use-mobile";
 
 interface ChatSession {
   id: string;
@@ -43,6 +44,7 @@ export default function Chat() {
   ]);
   const [currentChatId, setCurrentChatId] = useState("1");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const isMobile = useIsMobile();
 
   /**
    * Send a chat message. If a transcript (customMessage) is passed, that text is sent.
@@ -198,10 +200,8 @@ export default function Chat() {
       </AnimatePresence>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col h-full relative ml-72">
-        <div
-          className={`flex items-center gap-4 p-4 border-b border-gray-800`}
-        >
+      <div className={`flex-1 flex flex-col h-full relative ${isMobile ? (isSidebarOpen ? 'ml-72' : 'ml-1') : 'ml-72'} transition-all duration-300`}>
+        <div className={`flex items-center gap-4 p-4 border-b border-gray-800`}>
           <button
             onClick={() => setIsSidebarOpen(!isSidebarOpen)}
             className="hover:bg-gray-800 p-2 rounded-full transition-colors"
