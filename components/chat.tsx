@@ -33,25 +33,16 @@ export default function Chat() {
     {
       id: "1",
       title: "New Chat",
-      messages: [
-        {
-          role: "assistant",
-          content:
-            "Hello! I'm your AI shopping assistant. How can I help you today?",
-        },
-      ],
+      messages: [],
     },
   ]);
   const [currentChatId, setCurrentChatId] = useState("1");
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const isMobile = useIsMobile();
 
-  /**
-   * Send a chat message. If a transcript (customMessage) is passed, that text is sent.
-   */
-  const handleSendMessage = async (customMessage?: string) => {
-    const textToSend = customMessage !== undefined ? customMessage : input;
-    if (!textToSend.trim()) return;
+  const handleSendMessage = async () => {
+    const textToSend = input.trim();
+    if (!textToSend) return;
 
     const newUserMessage = { role: "user", content: textToSend };
     const updatedHistory = [...messages, newUserMessage];
@@ -61,7 +52,7 @@ export default function Chat() {
     setChatSessions((prev) =>
       prev.map((chat) =>
         chat.id === currentChatId
-          ? { ...chat, messages: [...chat.messages, newUserMessage] }
+          ? { ...chat, messages: [...chat.messages, newUserMessage], title: chat.title === "New Chat" ? textToSend : chat.title }
           : chat
       )
     );
@@ -107,7 +98,7 @@ export default function Chat() {
       toast.error("Failed to get a response from the server.");
     } finally {
       setIsLoading(false);
-      setInput("");
+      setInput(""); // Clear the input after sending
     }
   };
 
@@ -192,7 +183,11 @@ export default function Chat() {
               chatHistory={chatSessions}
               onChatSelect={(id) => setCurrentChatId(id)}
               onNewChat={() => { }}
-              onRename={() => { }}
+              onRename={(id, title) => {
+                setChatSessions((prev) =>
+                  prev.map((chat) => (chat.id === id ? { ...chat, title } : chat))
+                );
+              }}
               currentChatId={currentChatId}
             />
           </motion.div>

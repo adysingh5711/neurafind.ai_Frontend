@@ -1,6 +1,6 @@
-import { motion, AnimatePresence } from "framer-motion"
-import { Plus, Edit2, Check, X } from "lucide-react"
-import { useState } from "react"
+import { motion, AnimatePresence } from "framer-motion";
+import { Plus, Edit2, Check, X } from "lucide-react";
+import { useState } from "react";
 
 interface SidebarProps {
   isOpen: boolean;
@@ -115,5 +115,5 @@ export default function Sidebar({
         </motion.div>
       )}
     </AnimatePresence>
-  )
+  );
 }
