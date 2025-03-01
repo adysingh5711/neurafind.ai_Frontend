@@ -68,12 +68,7 @@ To run the project locally, make sure you have the following installed:
     ```
 
 4. Set up environment variables for OpenAI and Pinecone:
-    - Create a `.env` file in the root directory of the project.
-    - Add your keys:
-
-    ```bash
-    NEXT_PUBLIC_BACKEND_URL=your_backend_url
-    ```
+    - Rename the `.env.example` file to `.env` and add your keys:
 
 5. Run the development server:
 
